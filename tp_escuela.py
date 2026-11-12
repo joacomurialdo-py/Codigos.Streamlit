@@ -1,233 +1,100 @@
 
 import streamlit as st
 
-# Configuración de la página
-st.set_page_config(
-    page_title="Sistema de Calificaciones",
-    page_icon="📚",
-    layout="centered"
-)
+st.set_page_config(page_title="Sistema de Calificaciones")
 
-st.title("📚 Sistema de Calificaciones")
-st.write("Registro y administración de notas de alumnos")
+st.title("Sistema de Calificaciones")
 
-# Inicializar las listas en session_state
+# Listas de alumnos y notas
 if "alumnos" not in st.session_state:
     st.session_state.alumnos = []
-
-if "notas" not in st.session_state:
     st.session_state.notas = []
 
+alumnos = st.session_state.alumnos
+notas = st.session_state.notas
 
-# --------------------------------
-# REGISTRAR ALUMNOS
-# --------------------------------
-
+# REGISTRAR ALUMNO
 st.header("Registrar alumno")
 
-nombre = st.text_input("Nombre del alumno")
+nombre = st.text_input("Nombre")
+nota = st.number_input("Nota", 1, 10, 1)
 
-nota = st.number_input(
-    "Nota",
-    min_value=1,
-    max_value=10,
-    step=1
-)
-
-if st.button("Registrar alumno"):
-
+if st.button("Registrar"):
     nombre = nombre.strip()
 
-    if nombre == "":
-        st.error("El nombre no puede estar vacío.")
-
-    elif nombre.lower() in [
-        alumno.lower() for alumno in st.session_state.alumnos
-    ]:
-        st.error("Ese alumno ya está registrado.")
-
+    if not nombre:
+        st.error("Ingrese un nombre.")
+    elif nombre.lower() in [a.lower() for a in alumnos]:
+        st.error("El alumno ya existe.")
     else:
-        st.session_state.alumnos.append(nombre)
-        st.session_state.notas.append(int(nota))
+        alumnos.append(nombre)
+        notas.append(nota)
+        st.success("Alumno registrado.")
 
-        st.success("Alumno registrado correctamente.")
-
-
-st.divider()
-
-
-# --------------------------------
-# MOSTRAR TABLA DE ALUMNOS
-# --------------------------------
-
+# LISTADO
 st.header("Listado de alumnos")
 
-if len(st.session_state.alumnos) > 0:
-
-    st.table({
-        "Alumno": st.session_state.alumnos,
-        "Nota": st.session_state.notas
-    })
-
+if alumnos:
+    st.table({"Alumno": alumnos, "Nota": notas})
 else:
-    st.info("Todavía no hay alumnos registrados.")
+    st.info("No hay alumnos registrados.")
 
-
-st.divider()
-
-
-# --------------------------------
 # ESTADÍSTICAS
-# --------------------------------
+st.header("Estadísticas")
 
-st.header("Estadísticas del curso")
+if notas:
+    aprobados = sum(n >= 6 for n in notas)
 
-if len(st.session_state.notas) > 0:
-
-    promedio = sum(st.session_state.notas) / len(st.session_state.notas)
-
-    nota_maxima = max(st.session_state.notas)
-    nota_minima = min(st.session_state.notas)
-
-    aprobados = 0
-    desaprobados = 0
-
-    for nota_alumno in st.session_state.notas:
-
-        if nota_alumno >= 6:
-            aprobados += 1
-        else:
-            desaprobados += 1
-
-    col1, col2 = st.columns(2)
-
-    col1.metric("Promedio general", f"{promedio:.2f}")
-    col2.metric("Nota más alta", nota_maxima)
-
-    col3, col4 = st.columns(2)
-
-    col3.metric("Nota más baja", nota_minima)
-    col4.metric("Cantidad de alumnos", len(st.session_state.alumnos))
-
+    st.write("Promedio:", round(sum(notas) / len(notas), 2))
+    st.write("Nota máxima:", max(notas))
+    st.write("Nota mínima:", min(notas))
+    st.write("Cantidad de alumnos:", len(alumnos))
     st.write("Aprobados:", aprobados)
-    st.write("Desaprobados:", desaprobados)
-
-    porcentaje = (aprobados / len(st.session_state.notas)) * 100
-
-    st.write(f"Porcentaje de aprobados: {porcentaje:.2f}%")
-
+    st.write("Desaprobados:", len(notas) - aprobados)
+    st.write("Porcentaje de aprobados:", round(aprobados / len(notas) * 100, 2), "%")
 else:
-    st.warning("No hay notas para calcular estadísticas.")
+    st.warning("No hay notas.")
 
-
-st.divider()
-
-
-# --------------------------------
 # BUSCAR ALUMNO
-# --------------------------------
-
 st.header("Buscar alumno")
 
-nombre_buscar = st.text_input("Ingrese el nombre que desea buscar")
+buscar = st.text_input("Nombre a buscar")
 
 if st.button("Buscar"):
+    if buscar.lower().strip() in [a.lower() for a in alumnos]:
+        i = [a.lower() for a in alumnos].index(buscar.lower().strip())
+        st.success(f"{alumnos[i]} - Nota: {notas[i]}")
+    else:
+        st.error("Alumno no encontrado.")
 
-    nombre_buscar = nombre_buscar.strip()
-
-    encontrado = False
-
-    for i in range(len(st.session_state.alumnos)):
-
-        if st.session_state.alumnos[i].lower() == nombre_buscar.lower():
-
-            st.success(
-                f"Alumno: {st.session_state.alumnos[i]} "
-                f"- Nota: {st.session_state.notas[i]}"
-            )
-
-            encontrado = True
-            break
-
-    if not encontrado:
-        st.error("No se encontró el alumno.")
-
-
-st.divider()
-
-
-# --------------------------------
-# ELIMINAR ALUMNO
-# --------------------------------
-
-st.header("Eliminar alumno")
-
-if len(st.session_state.alumnos) > 0:
-
-    alumno_eliminar = st.selectbox(
-        "Seleccione el alumno que desea eliminar",
-        st.session_state.alumnos
-    )
-
-    if st.button("Eliminar alumno"):
-
-        indice = st.session_state.alumnos.index(alumno_eliminar)
-
-        st.session_state.alumnos.pop(indice)
-        st.session_state.notas.pop(indice)
-
-        st.success("Alumno eliminado correctamente.")
-
-else:
-    st.info("No hay alumnos para eliminar.")
-
-
-st.divider()
-
-
-# --------------------------------
-# MODIFICAR NOTA (OPCIONAL)
-# --------------------------------
-
+# MODIFICAR NOTA
 st.header("Modificar nota")
 
-if len(st.session_state.alumnos) > 0:
+if alumnos:
+    alumno = st.selectbox("Seleccione alumno", alumnos)
+    nueva_nota = st.number_input("Nueva nota", 1, 10, 1)
 
-    alumno_modificar = st.selectbox(
-        "Seleccione un alumno",
-        st.session_state.alumnos,
-        key="alumno_modificar"
-    )
+    if st.button("Actualizar"):
+        i = alumnos.index(alumno)
+        notas[i] = nueva_nota
+        st.success("Nota actualizada.")
 
-    nueva_nota = st.number_input(
-        "Nueva nota",
-        min_value=1,
-        max_value=10,
-        step=1,
-        key="nueva_nota"
-    )
+# ELIMINAR ALUMNO
+st.header("Eliminar alumno")
 
-    if st.button("Actualizar nota"):
+if alumnos:
+    eliminar = st.selectbox("Alumno a eliminar", alumnos, key="eliminar")
 
-        indice = st.session_state.alumnos.index(alumno_modificar)
+    if st.button("Eliminar"):
+        i = alumnos.index(eliminar)
+        alumnos.pop(i)
+        notas.pop(i)
+        st.success("Alumno eliminado.")
 
-        st.session_state.notas[indice] = int(nueva_nota)
-
-        st.success("Nota actualizada correctamente.")
-
-
-st.divider()
-
-
-# --------------------------------
-# VACIAR TODOS LOS REGISTROS
-# --------------------------------
-
+# VACIAR REGISTROS
 st.header("Administrar registros")
 
 if st.button("Vaciar todos los registros"):
-
-    st.session_state.alumnos.clear()
-    st.session_state.notas.clear()
-
-    st.success("Todos los registros fueron eliminados.")
+    alumnos.clear()
+    notas.clear()
+    st.success("Registros eliminados.")
